@@ -6,8 +6,11 @@
 
 namespace LeakyBucketRateLimiter;
 
-use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
+
+use Laminas\Diactoros\Response as LaminasResponse;
 
 use LeakyBucketRateLimiter\Bucket;
 
@@ -72,26 +75,26 @@ class RateLimiter {
 
     /**
      * Execute our Rate Limiter
-     * @param  \Psr\Http\Message\RequestInterface  $request
-     * @param  \Psr\Http\Message\ResponseInterface $response
-     * @param  callable          $next
+     *
+     * @param  \Psr\Http\Message\ServerRequestInterface $request PSR-7 request
+     * @param  \Psr\Http\Server\RequestHandlerInterface $handler PSR-15 request handler
      * @return \Psr\Http\Message\ResponseInterface
      */
-    public function __invoke(RequestInterface $request, ResponseInterface $response, callable $next) {
+    public function __invoke(ServerRequestInterface $request, RequestHandler $handler): ResponseInterface {
 
         // Check if our route is present in the unlimited settings
         $route = rtrim($request->getUri()->getPath(), '/');
 
         foreach($this->settings['ignore'] as $ignored_route) {
             if(!!preg_match("@^{$ignored_route}(/.)?$@", $route)) {
-                return $next($request, $response);
+                return $handler->handle($request);
             }
         }
         // Run our user-supplied function to get the key we can limit on
         $meta = call_user_func($this->settings['callback'], $request);
 
         // $meta of TRUE triggers a rate limit override
-        if($meta === TRUE) { return $next($request, $response); }
+        if($meta === TRUE) { return $handler->handle($request); }
 
         if(!is_array($meta) || !array_key_exists('token', $meta)) {
             throw new \InvalidArgumentException('Callback must return array \'$meta\' with \'token\' value');
@@ -106,15 +109,17 @@ class RateLimiter {
         $bucket->leak();
 
         if($bucket->isFull()) {
-            return call_user_func($this->settings['throttle'], $response, $bucket, $this->settings);
+          $response = new LaminasResponse();
+          return call_user_func($this->settings['throttle'], $response, $bucket, $this->settings);
         }
 
         $bucket->fill();
         $this->save($bucket);
+        $response = $handler->handle($request);
         if($this->settings['header'] !== FALSE) {
-            $response = $response->withHeader($this->settings['header'], $bucket->getCapacityString());
+          $response = $response->withHeader($this->settings['header'], $bucket->getCapacityString());
         }
-        return $next($request, $response);
+        return $response;
     }
 
     /**
