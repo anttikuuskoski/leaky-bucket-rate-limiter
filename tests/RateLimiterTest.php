@@ -11,12 +11,8 @@ use Zend\Diactoros\Response;
 use Zend\Diactoros\Uri;
 
 class RateLimiterTest extends TestCase {
-    protected $storage = [
-        'scheme' => 'tcp',
-        'host' => 'redis',
-        'port' => 6379
-    ];
 
+    protected $storage = null;
     public function setUp() {
 
     }

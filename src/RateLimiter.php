@@ -37,8 +37,6 @@ class RateLimiter {
     /**
      * Storage mechanism for rate tracking
      *
-     * This will default to a tcp://localhost:6379 (Redis)
-     *
      * @var mixed
      */
     private $storage = [];
@@ -68,13 +66,8 @@ class RateLimiter {
         if(is_null($this->settings['throttle'])) { throw new \InvalidArgumentException("Callback required for Rate Limiter"); }
         if(is_null($this->settings['callback'])) { throw new \InvalidArgumentException("Throttle response required for Rate Limiter"); }
 
-        if(is_null($storage) ) {
-            $this->storage = new \Predis\Client();
-        } else if(is_array($storage) ) {
-            $this->storage = new \Predis\Client($storage);
-        } else {
-            $this->storage = $storage;
-        }
+        if(is_null($storage)) { throw new \InvalidArgumentException("Invalid storage"); }
+        $this->storage = $storage;
     }
 
     /**
