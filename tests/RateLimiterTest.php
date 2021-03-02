@@ -2,22 +2,23 @@
 
 use PHPUnit\Framework\TestCase;
 
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
 
-use Zend\Diactoros\ServerRequest as Request;
-use Zend\Diactoros\ServerRequestFactory;
-use Zend\Diactoros\Response;
-use Zend\Diactoros\Uri;
+use Laminas\Diactoros\ServerRequest as Request;
+use Laminas\Diactoros\Response as Response;
+use Laminas\Diactoros\Uri;
 
 include_once('FakeStorage.php');
+include_once('FakeHandler.php');
 
 class RateLimiterTest extends TestCase {
 
     protected $storage = null;
+    protected $handler = null;
 
     public function setUp() {
       $this->storage = new FakeStorage();
+      $this->handler = new FakeHandler();
     }
 
     public function testIgnore() {
@@ -57,8 +58,7 @@ class RateLimiterTest extends TestCase {
         $request = (new Request)
             ->withUri(new Uri("https://example.com/api"))
             ->withMethod("GET");
-        $response = new Response;
-        $limiter($request, $response, function() {});
+        $limiter($request, $this->handler);
     }
 
     /**
@@ -76,8 +76,7 @@ class RateLimiterTest extends TestCase {
         $request = (new Request)
             ->withUri(new Uri("https://example.com/api"))
             ->withMethod("GET");
-        $response = new Response;
-        $limiter($request, $response, function() {});
+        $limiter($request, $this->handler);
     }
 
     public function testMetaAsTrue() {
@@ -97,8 +96,7 @@ class RateLimiterTest extends TestCase {
         $request = (new Request)
             ->withUri(new Uri("https://example.com/api"))
             ->withMethod("GET");
-        $response = new Response;
-        $limiter($request, $response, function() {});
+        $limiter($request, $this->handler);
     }
 
     /**
@@ -116,8 +114,7 @@ class RateLimiterTest extends TestCase {
         $request = (new Request)
             ->withUri(new Uri("https://example.com/api"))
             ->withMethod("GET");
-        $response = new Response;
-        $limiter($request, $response, function() {});
+        $limiter($request, $this->handler);
     }
 
     public function testBucketIsFull() {
@@ -138,10 +135,8 @@ class RateLimiterTest extends TestCase {
         $request = (new Request)
             ->withUri(new Uri("https://example.com/api"))
             ->withMethod("GET");
-        $response = new Response;
-        $limiter($request, $response, function($req, $res) {
-            $this->assertContains("X-Rate-Limit", array_keys($res->getHeaders()));
-        });
+        $response = $limiter($request, $this->handler);
+        $this->assertContains("X-Rate-Limit", array_keys($response->getHeaders()));
     }
 
     public function testCustomHeader() {
@@ -158,10 +153,13 @@ class RateLimiterTest extends TestCase {
         $request = (new Request)
             ->withUri(new Uri("https://example.com/api"))
             ->withMethod("GET");
-        $response = new Response;
-        $limiter($request, $response, function($req, $res) {
-            $this->assertContains("X-Api-Rate-Limit", array_keys($res->getHeaders()));
-        });
+
+        $response = $limiter($request, $this->handler);
+
+        $this->assertContains(
+          "X-Api-Rate-Limit",
+          array_keys($response->getHeaders())
+        );
     }
 
     public function testDisabledHeader() {
@@ -178,10 +176,8 @@ class RateLimiterTest extends TestCase {
         $request = (new Request)
             ->withUri(new Uri("https://example.com/api"))
             ->withMethod("GET");
-        $response = new Response;
-        $limiter($request, $response, function($req, $res) {
-            $this->assertEmpty(array_keys($res->getHeaders()));
-        });
+        $response = $limiter($request, $this->handler);
+        $this->assertEmpty(array_keys($response->getHeaders()));
     }
 
     public function testPrefix() {
@@ -189,6 +185,6 @@ class RateLimiterTest extends TestCase {
     }
 
     public function testSuffix() {
-        
+
     }
 }
