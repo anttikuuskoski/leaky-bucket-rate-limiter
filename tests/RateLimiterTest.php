@@ -10,11 +10,14 @@ use Zend\Diactoros\ServerRequestFactory;
 use Zend\Diactoros\Response;
 use Zend\Diactoros\Uri;
 
+include_once('FakeStorage.php');
+
 class RateLimiterTest extends TestCase {
 
     protected $storage = null;
-    public function setUp() {
 
+    public function setUp() {
+      $this->storage = new FakeStorage();
     }
 
     public function testIgnore() {
