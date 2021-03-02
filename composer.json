@@ -1,7 +1,15 @@
 {
-    "name": "robwittman/leaky-bucket-rate-limiter",
-    "description": "PSR-7 Middleware for implementing a Leaky Bucket Rate Limiter",
+    "name": "anttikuuskoski/leaky-bucket-rate-limiter",
+    "description": "A storage independent Slim 4 Middleware (Psr-7 & Psr-15) for implementing a Leaky Bucket Rate Limiter based on dijitaltrix/leaky-bucket-rate-limiter (based on robwittman/leaky-bucket-rate-limiter)",
     "authors": [
+        {
+            "name": "Eino-Antti Kuuskoski",
+            "email": "antti@kotiasuomi.fi"
+        },
+        {
+            "name": "Ian Grindley",
+            "email": "ian.grindley@iperiumrealestate.com"
+        },
         {
             "name": "Rob Wittman",
             "email": "rob@ihsdigital.com"
