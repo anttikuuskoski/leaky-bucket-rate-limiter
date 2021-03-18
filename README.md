@@ -1,5 +1,8 @@
-### PSR-7 Leaky Bucket Rate Limiter
+### Slim 4 -compatible Leaky Bucket Rate Limiter
 
+A storage independent Slim 4 Middleware (Psr-7 & Psr-15) for implementing a Leaky Bucket Rate Limiter. Originally intended for creating a session storage based leaky bucket rate limiter.
+
+Based on dijitaltrix/leaky-bucket-rate-limiter (based on robwittman/leaky-bucket-rate-limiter).
 
 This middleware enables API Rate-Limiting based on a Leaky Bucket algorithm.
 
@@ -7,20 +10,39 @@ This middleware enables API Rate-Limiting based on a Leaky Bucket algorithm.
 
 To get started, you can easily use composer:
 
-`composer require robwittman/leaky-bucket-rate-limiter`
+`composer require anttikuuskoski/leaky-bucket-rate-limiter`
 
-Once installed, require the package, apply some settings, and start limiting.
+Once installed, you need to create / configure a storage class, require the package, apply some settings, and start limiting.
+
+### Storage
+
+Rate Limiter requires a storage object, which implements the StorageInterface.
+
+``` php
+use LeakyBucketRateLimiter\StorageInterface;
+
+class ObjectWithGetAndSetMethods implements StorageInterface {
+    public function get(string $key) {
+        return $this->{$key};
+    }
+    public function set(string $key, $value) : void {
+        $this->{$key} = $value;
+    }
+}
+$storage = new ObjectWithGetAndSetMethods();
+$slim->add(new RateLimiter([
+    // Rate limiter settings
+    ],
+    $storage
+));
+```
+
+### Examples
 
 ```php
-<?php
 
-require_once('vendor/autoload.php');
-
-use LeakyBucketRateLimiter\RateLimiter;
-
-$slim = \Slim\App();
-
-$slim->add(new RateLimiter([
+TODO::Slim example
+$limiter = new RateLimiter([
     'callback' => function(RequestInterface $request) {
         return [
             'token' => <token>
@@ -31,9 +53,12 @@ $slim->add(new RateLimiter([
             'error' => "User request limit reached"
         ]);
     }
-]))
+],
+$storage // class implementing StorageInterface required.
+);
 
-$slim->run();
+//Hook limiter to slim etc.
+
 ```
 
 The only required settings to use RateLimiter is a callback and throttle.
@@ -48,7 +73,9 @@ $slim->add(new RateLimiter([
             'token' => $_SERVER['REMOTE_ADDR']
         ];
     }
-]));
+],
+$storage
+));
 ```
 
 ##### Session ID
@@ -59,7 +86,9 @@ $slim->add(new RateLimiter([
             'token' => session_id()
         ];
     }
-]));
+],
+$storage
+));
 ```
 
 ##### Request Attribute
@@ -70,11 +99,13 @@ $slim->add(new RateLimiter([
             'token' => $request->getAttribute('<token_or_uid>')
         ];
     },
-]));
+],
+$storage
+));
 
 ```
 
-Once the bucket has a token to act on, it communicates with Redis to keep track of traffic. If the token is over it's request limit, it will trigger the `throttle` function passed to the constructor.
+Once the bucket has a token to act on, it communicates with storage to keep track of traffic. If the token is over it's request limit, it will trigger the `throttle` function passed to the constructor.
 
 ### Parameters
 
@@ -88,7 +119,9 @@ $slim->add(new RateLimiter([
             'token' => session_id()
         ];
     }
-]))
+],
+$storage
+))
 ```
 
 #### Throttle *(required)*
@@ -101,7 +134,9 @@ $slim->add(new RateLimiter([
             'message' => "Dude, you gotta slow down"
         ]);
     };
-]));
+],
+$storage
+));
 ```
 
 **NOTE** All further settings assume `callback` and `throttle` parameters are already set
@@ -113,7 +148,9 @@ Capacity is the total amount of drips (requests) the bucket may contain. Leak is
 $slim->add(new RateLimiter([
     'capacity' => 45,
     'leak' => 1
-]));
+],
+$storage
+));
 ```
 
 
@@ -127,7 +164,9 @@ $slim->add(new RateLimiter([
         'users/me',
         'other/ignored/routes'
     ]
-]));
+],
+$storage
+));
 ```
 
 #### Prefix / Postfix
@@ -137,7 +176,9 @@ Provide a prefix / suffix for the bucket key. The key will be stored in Redis as
 $slim->add(new RateLimiter([
     'prefix' => 'bucket-o-leaks',
     'suffix' => "limiter"
-]));
+],
+$storage
+));
 ```
 
 #### Header
@@ -145,42 +186,14 @@ Specify what header to provide, containing Rate Limiting info. Set to false to d
 ```php
 $slim->add(new RateLimiter([
     'header' => "Rate-Limiting-Meta"
-]));
+],
+$storage
+));
 
 // Rate-Limiting-Meta: X / Y
 // X = Current drips in bucket, Y = capacity
 ```
 
-
-### Storage
-
-By default, the Rate Limiter will attempt to connect to a local redis instance at http://127.0.0.1:6379, as per `Predis\Client()`.This can be overridden by providing either an array of settings for `Predis\Client` to connect with,
-or providing an object with methods get() and set() for storing and retrieving data (mysql, memcached, mongo, etc). If using docker-compose development container, just use `redis` as the hostname, and container linking will connect it.
-
-``` php
-$slim->add(new RateLimiter([
-    // Rate limiter settings
-], [
-    'scheme' => 'tcp://',
-    'host' => 'redis',
-    'port' => 6379
-]))
-
-// OR
-
-class ObjectWithGetAndSetMethods {
-    public function get($key) {
-        return $this->{$key};
-    }
-    public function set($key, $value) {
-        $this->{$key} = $value;
-    }
-}
-$storage = new ObjectWithGetAndSetMethods();
-$slim->add(new RateLimiter([
-    // Rate limiter settings
-], $storage));
-```
 
 ### Development / Testing
 

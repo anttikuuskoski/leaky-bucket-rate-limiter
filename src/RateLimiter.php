@@ -13,6 +13,7 @@ use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
 use Laminas\Diactoros\Response as LaminasResponse;
 
 use LeakyBucketRateLimiter\Bucket;
+use LeakyBucketRateLimiter\StorageInterface;
 
 class RateLimiter {
 
@@ -62,7 +63,7 @@ class RateLimiter {
      * @param array $settings
      * @param mixed $storage   Mechanism for storing and retrieving rate data
      */
-    public function __construct(array $settings = array(), $storage = null) {
+    public function __construct(array $settings = array(), StorageInterface $storage = null) {
         $settings       = array_intersect_key($settings, self::$defaults);
         $this->settings = array_merge(self::$defaults, $settings);
 
